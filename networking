@@ -1,0 +1,12 @@
+#### Virtual networking (VNET)
+vnet is azure private network in the cloud and it will allow your cloud resources to communicate securely with each other, the internet .
+when we creating v-net we need to define ip range 
+10.0.0.0/16 -- 65000 ip will be there for that cidr range
+
+### subnet 
+subnet is division of vnet 
+app -- business application (resources)
+web --- web application (frontend or ui )
+db --- database
+
+
