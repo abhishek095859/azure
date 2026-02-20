@@ -1,0 +1,80 @@
+dev.azure.com --- devops activity 
+portal.azure.com --- normal or all azure resources
+
+
+## resource -- the service which are used is service
+            like vm's,database..
+
+## resource groups -- Resource Group is a logical container that holds related resources
+
+resource manager is responsible for creating the resources.
+
+
+difference b/w resource group and individual
+
+in resource grp every resource is organized , easy to access 
+in individual it is hard to organize 
+
+and resource grp is mandatory to use the resources
+
+
+### deploying a Jenkins application in vm 
+
+## install  java 
+sudo apt update
+sudo apt install openjdk-17-jre
+
+then check for java version
+java -version
+
+wget https://get.jenkins.io/war-stable/latest/jenkins.war
+
+java -jar jenkins.war --httpPort=8080
+
+access the ip ---
+
+
+## VMSS-- virtual machine scale set (auto scaling)	
+vmss automatically increase the number of vm instance has demand grow and decrease the vm instance when demand is less.
+
+vertical scaling -- This involves upgrading or increasing the capacity of the resources of a single machine — adding more CPU cores, RAM, or faster storage
+horizontal sscaling -- This adds more machines or instances to distribute the workload, often behind a load balancer. 
+
+scale out -- adding the resources
+scale in -- removing the resources
+
+static --- public ip will not changes.
+dynamic --- public ip will changes.
+
+## manual scaling and auto scaling -- in manual scaling we define the number of instance to be created 
+in auto scaling we can configure the scaling rule  for cpu by adding scale in and scale out rules.
+
+
+### to test for cpu or to increase the cpu for pratical
+sudo apt update 
+sudo apt install stress -y
+sudo stress --cpu 1000
+
+
+Microsoft.Insights is the Azure resource provider responsible for monitoring, metrics collection, logging, alerting, and autoscaling signals used by Azure Monitor and related services.
+
+
+##### pratical done on azure vm scale set ########
+
+ created a new vmss and configured with required details like manual scaling to create new instance --2 
+then after creating we can change the scale rule like scale in and scale out i have changed to 80% cpu in scale-out it will create new instance and 20% in scale-in it will delete the extre instances
+
+
+
+#### azure compute gallery #####
+
+azure compute gallery is used to store and manage custom vm images and other resources in the central repository(upto 1000vm)
+it has key features 
+global repository --- it distributes your image globally ensure faster deployement
+scaling -- scale vm deployement across different regions while using same base image
+versioning -- maintain multiple versions of our custom vm images
+
+
+
+
+	
