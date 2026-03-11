@@ -1,0 +1,83 @@
+Step 1: Connect your Terminal to the Cluster
+AWS needs to know that your local kubectl command should talk to your new EKS cluster.
+
+Open your terminal.
+
+Run this command (replace the name and region with yours):
+
+Bash
+aws eks update-kubeconfig --region ap-south-1 --name etl-monitoring-cluster
+Test it: kubectl get nodes. If you see your nodes, you are connected!
+
+Step 2: Create the Grafana Pod (Using Helm)
+In Kubernetes, we don't usually create a single "Pod" manually; we use a Helm Chart which creates the Pod, the Service, and the Deployment all at once.
+
+Add Grafana Repo:
+
+Bash
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+Install Grafana:
+
+Bash
+# We create a namespace called 'monitoring' to keep things clean
+kubectl create namespace monitoring
+
+helm install my-grafana grafana/grafana \
+  --namespace monitoring \
+  --set service.type=LoadBalancer
+Using service.type=LoadBalancer will give you a public URL to access Grafana.
+
+Step 3: Connect CloudWatch Logs (The Permissions)
+Now we must give that Grafana pod "permission" to read your AWS logs. We use IRSA (IAM Roles for Service Accounts).
+
+Create an IAM Policy: Go to IAM Console > Policies > Create Policy. Use this JSON:
+
+JSON
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["logs:DescribeLogGroups", "logs:StartQuery", "logs:GetQueryResults", "cloudwatch:GetMetricData"],
+    "Resource": "*"
+  }]
+}
+Name it GrafanaCloudWatchPolicy.
+
+Create the Service Account: Run this command in your terminal. This "links" a Kubernetes user to an AWS IAM role:
+
+Bash
+eksctl create iamserviceaccount \
+  --name grafana-sa \
+  --namespace monitoring \
+  --cluster etl-monitoring-cluster \
+  --attach-policy-arn arn:aws:iam::<YOUR_ACCOUNT_ID>:policy/GrafanaCloudWatchPolicy \
+  --approve
+Step 4: Configure Grafana to use the "Service Account"
+We need to tell the Grafana Pod to use that grafana-sa we just created.
+
+Update your Grafana installation:
+
+Bash
+helm upgrade my-grafana grafana/grafana \
+  --namespace monitoring \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=grafana-sa
+Step 5: Setup the Failure Percentage Dashboard
+Log in to Grafana: * Get your LoadBalancer URL: kubectl get svc -n monitoring
+
+Get your password: kubectl get secret --namespace monitoring my-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+
+Add CloudWatch Data Source:
+
+In Grafana: Connections > Data Sources > Add CloudWatch.
+
+Auth Provider: Select AWS SDK Default.
+
+Default Region: ap-south-1.
+
+Create the Failure Panel:
+
+Add a new Visualization.
+
+Select Query Mode: CloudWatch Log
