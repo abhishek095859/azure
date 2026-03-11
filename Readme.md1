@@ -74,6 +74,34 @@ global repository --- it distributes your image globally ensure faster deployeme
 scaling -- scale vm deployement across different regions while using same base image
 versioning -- maintain multiple versions of our custom vm images
 
+###### app service ###############
+app service platform which is fully managed for running web apps or containers without managing underlying service 
+
+##########################################
+az <service> <verb>
+service -- what type of resources u need to use like vm,aks.
+verb --- what u want to do like listing all the resources.
+
+az vm list and the ouput is in json
+
+== az storage account list # to list all the storage blob in that account 
+
+Connect-AzAccount -TenantId 6cf07314-a413-4d52-b31e-048a60f8ec53
+
+#############################################
+
+A Managed Device of hardware—like a laptop 💻, phone 📱, or tablet—that is controlled  by an organization's IT department using specialized software. Instead of the user having total control, the organization "manages" the device to ensure it stays secure, updated, and follows company rules.
+##############################################
+Redundancy ::: 
+
+Microsoft azure will copy mutlipe times of my files in case of emergency 
+LRS which we have copy of 3 times of file and it will store on select region in data centers
+ZRS which has copy of 3 and it will store in same region centre but in different data centers
+GRS which as copy of 3 in same region and also have 3 copy in other regions also 
+GZRS combination of ZRS & GRS
+
+
+
 
 
 
