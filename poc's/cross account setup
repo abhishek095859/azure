@@ -1,0 +1,114 @@
+### Account A (S3 Only)
+Create the S3 Bucket:
+
+Go to S3 > Create bucket.
+
+Name: my-terraform-tftate (must be globally unique).
+
+Region: Select your region (e.g., ap-south-1).
+
+Versioning: Enable (Highly recommended for state recovery).
+
+Create the Cross-Account IAM Role:
+
+Go to IAM > Roles > Create role.
+
+Select Custom trust policy and paste this:
+
+JSON
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::ACCOUNT_B_ID:root" },
+      "Action": "sts:AssumeRole"
+  }]
+}
+
+
+Permissions: Attach an inline policy to this role:
+
+JSON
+{
+    "Version": "2012-10-17",
+    "Statement": [{
+        "Effect": "Allow",
+        "Action": [
+            "s3:ListBucket",
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:DeleteObject"
+        ],
+        "Resource": [
+            "arn:aws:s3:::my-company-terraform-state",
+            "arn:aws:s3:::my-company-terraform-state/*"
+        ]
+    }]
+}
+Role Name: CrossAccountStateRole.
+
+
+
+### account B
+Go to IAM > Identity Providers > Add provider.
+
+Select OpenID Connect.
+
+Provider URL: https://token.actions.githubusercontent.com
+
+Audience: sts.amazonaws.com
+
+After creating the provider, click Assign role > Create new role.
+
+Trust Policy: 
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_B_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:abhishek095859/demo-poc:*"
+        },
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+
+
+create a role 
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::ACCOUNT_A_ID:role/CrossAccountStateRole"[AccountAid &rolename]
+        }
+    ]
+}
+
+Attach AmazonVPCFullAccess and AmazonEC2FullAccess policy
+
+## it is placed in backend.tf to access the s3 bucket 
+assume_role = {
+      role_arn = "arn:aws:iam::602151476946:role/CrossAccountStateRole" [Account A][with role name]
+}
+## this will be placed in yaml file to access the infraset 
+
+name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185863138492:role/crossaccountb  [Account B][with role name]
+          aws-region: ap-south-1
+
+
