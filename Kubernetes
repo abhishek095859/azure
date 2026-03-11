@@ -1,0 +1,149 @@
+a container is a ligh weight, executable software package the contains the code runtime , system tools libaries and settings  
+run applications with all their dependencies.
+
+the size of conatiner is megabytes and vm's in gigabytes
+
+we have cluster --> pods ---> containers
+
+## monolithic is have everything in single.
+microservice is each service is a seperate unit.
+
+the master node is responible for managing the kubernetes cluster , stroing information regrading nodes , which are to be monitor.
+
+ETCD -- is database used to store the information in key value format  --=== etcd keeps track of the state of the Kubernetes cluster, including details about nodes, pods, and other resources.
+scheduler -- scheduler identifies the right nodes to places a container on based of container resources and working node capacity.
+controller manager --- node-controller === is used on boarding new nodes to the cluster and  manages the unavailable nodes to be active 
+                       replication-controller === desired no of container running all time in replication group.
+
+kube-apiserver === when we enter the any command "kubectl get pods" the kube control utility reach the kube api server , te kube api first authenticate and validate then takes the data from etcd 
+ and give the response to "kubectl get pods"
+
+kubelet ---  which create the pods 
+when kube scheduler requests the kubelet to create a new pod it will create by request runtime engine like (docker ) to pull the image and it will create the pod and also it monitor the pods
+it will send information of the pods whether they are active or not to kube api-server and kube api server sends to kube scheduler.
+kube proxy --- which is used to communicate within the cluster
+
+
+image spec --  define how the image should be build
+runtime spec --  define any conatiner runtime should be developed.
+
+
++++ kubectl get pods -n kube-system ## it will shown the system pods like worker and control plane pods
+
++++  aws eks list-clusters --region us-east-1 ### it will show eks cluster in that region.
+
+in pods we can create multiple container but it are different applications not the same if we want to scale up it will new pod in that pod we have our applications.
+
++++ kubectl run --name nginx --image nginx 
+--it will create a pod with name nginx and image is default nginx image 
+
+########################################################################################## creating a pod with yaml
+yaml file has four configuration 
+
+apiVersion: it is the version                                              kind -- pod , service, replicaset , deployment                                                                          version
+kind: it is type of                                         
+metadata: it has basic information like                                    version --- v1, v1, apps/v1, apps/v1
+ labels:
+       app:
+       type:
+
+spec:
+  containers:
+    - name :
+      image:
+
+kubectl create -f --name of yaml pod.yaml  ## it will create a pod 
+
+##################################################################################### ReplicaSet
+
+the replicaset which manages the pods when a pod is unavaiable or crash it will managed by replicaset it will create new pod.
+in the replicaSet also we have major configurations like
+
+apiversion:
+kind:
+metadata:
+
+spec:
+  template:
+                     the template which is the information of the pod to mainatain , what is the use of template is when a pod is crashed so at that time replicaset need to create new pod so for that we need exact information so it will take infomration from template with same configuration.
+replicas:                 we will define how many replica need to present for that application
+selector:
+    matchlabels:
+    type:           this is like which application should be maintained and what is major advantage is when we create a pod with out replicaset and that pod has a type which is defined in 
+                    metadata if we mention that name in the selector the replicaset will take care of that pod also , when that pod is crash or deleted the repilcaset will create or mainatain that pod.
+
+
+to increase the replicaset we have multiple ways like updating the yaml file or 
++++ kubectl scale rs --replicaset name --replicaset=6 
+++ kubectl get replicaset 
+++ kubectl delete replicaset myapp-replicaset  
+
+---- ReplicaSet ensures a fixed number of pods are running.
+  --- Deployment manages ReplicaSets and provides rolling updates, rollback, and version control
+
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml   ### this will generate the yaml file instaed of copying everythime for deployment
+kubectl run nginx --image=nginx --dry-run=client -o yaml   ## this is for pod 
+
+###################################################################### service ---
+
+nodeport  -- which is used expose the service to outside or to internet
+
+cluster ip --  which is used to communicate internal between the pods 
+
+load balancer
+
+
+################################################################# Namespaces 
+
+Namespace is a logical partition inside a Kubernetes cluster used to organize and isolate resources.
+++ kubectl create namespace dev ### it will create a namespace dev
+++ kubectl get pods -n=dev ## it will list all the pods in the dev namespace
+
+when we create a pods it will be default so if we need dev , prod we need to enter the namespace name 
+to set permannetly to dev we can use this command 
+
+++ kubectl config set-context $(kubectl config current-context) --namespace=dev
+
+to view all namespcae pods we use ++ kubectl get pods  --all --namespaces
+
+### imperative and declartive 
+--- imperative is we give the step by step instructions
+--- declartive is we only give the final destination
+
+kubectl api-resources --- it will list all the resources of k8s  
+kubectl explain pods
+kubectl explain pods --recursive ---- it will show what the items should be present in yaml file
+
+##################################### scheduling ##############################################
+
+in k8s we have an existing pods we can't change the nodeName to that pods
+we have a method like to change the node to that pods is bindng api for this the yaml is converts to json format
+
+
+=== Labels = tags attached to objects
+=== Selectors = filters used to find those objects
+
+
+############## taint & tolerations
+
+taint & tolerations are used to set restrictions on what pods can be scheduled on node.
+taint is added to node 
+like which pod to be created in that node 
+toleration is pods 
+creation of taint to a node
++++++ kubectl taint node --node name --key=value:effect 
+to remove the taint also same command at the end we need to add "-" symbol
++++  kubectl taint node --node name --key=value:effect-
+
+nodeseclector =====
+nodeselector is used for which pod is need to be creadted in which nodes
+like we have 3 nodes 1,2,3 the 1 node is bigger and other two are small so now pods will create randomly in any node but the pod requirement is high so for this problem we use the nodeselector
+we will define nodeselector when we creating a new pod 
+in yaml file we define 
+
+nodeselector :
+    size:large 
+
+before this we need to check the node size or change the size 
+++++ kubectl label node --node name <key=value>
+kubectl label node node-1 size=large
