@@ -101,8 +101,45 @@ GRS which as copy of 3 in same region and also have 3 copy in other regions also
 GZRS combination of ZRS & GRS
 
 
+#####################################################################################################################
+Special Regions 
+1. Azure Government -- in this it has us based agences for compliances and data residents requirement.
+2. Azure china cloud -- chinese data soverity laws
+3. Azure germany cloud -- specific german data privacy regulations and additional control organizations
 
+with special regions the data will not shared with other regions when we select the special regions it has there own rules to follow.
 
+### 
+Azure regional pairs ----
+regional pair means two different Azure regions within the same geography (country/area) that are paired for disaster recovery.
+like INDIA is geographical location in that we have mumbai and chennai right 
+so regional pair will store the data in two different regions so one region fails another regions will work 
+
+Disaster recovery
+Data replication
+High availability
+
+it will protect the data or application
+
+################################
+
+Availability set :
+
+it will be same data center but our data will be different racks like it will store in rack 1 and rack 2 when rack 1 fails them rack 2 will 
+be available 
+Protect against unexpected hardware failures. A fault domain is essentially a rack in a data center
+
+### example :-----
+
+If you have 4 VMs in an Availability Set with 2 FDs and 4 UDs:
+FDs: Two VMs go to Rack 1 (FD0), two to Rack 2 (FD1). If Rack 1 dies, 50% of capacity remains.
+UDs: Each VM is placed in a different UD (UD0-UD3). During maintenance, only one VM reboots at a time
+
+######################
+resource manager:
+
+resource manager is used for deployment and management service in azure resources.
+it is in json , in that json we define infrastructure and resource configuration
 
 
 	
