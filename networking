@@ -3,6 +3,11 @@ vnet is azure private network in the cloud and it will allow your cloud resource
 when we creating v-net we need to define ip range 
 10.0.0.0/16 -- 65000 ip will be there for that cidr range
 
+through vnet -- we can deploy the vms, other services to the vnet.
+vnet service endpoint -- 
+vnet peering -- we can connect vnet to each other to communicate with each other . the vnet you connect can be in same region or 
+different azure regions.
+
 ### subnet 
 subnet is division of vnet 
 app -- business application (resources)
