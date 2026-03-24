@@ -8,6 +8,14 @@ vnet service endpoint --
 vnet peering -- we can connect vnet to each other to communicate with each other . the vnet you connect can be in same region or 
 different azure regions.
 
+################ 
+on-premise networking
+- point to site virtual private network(VPN) : Connects one device , remote users.
+- site to site(VPN) : Connects entire office network to Azure.
+- azure expressroute : this is private network , traffic does not go to internet.
+
+
+
 ### subnet 
 subnet is division of vnet 
 app -- business application (resources)
