@@ -1,0 +1,261 @@
+1) infra provision using terraform code.
+ ec2 instance , security group , vpc , subnet , ecr and iam role 
+
+D:\Downloads\apollo-infra1
+
+the vpc and subnet ids are taken from the aws console as data block in the terraform code.
+
+
+2) implemented the cross account setup like in AWS account A we have tfstatefile in s3 bucket
+ and AWS acc B we have infra setup 
+
+https://minfytech-my.sharepoint.com/:w:/r/personal/abhishek_narmula_minfytech_com/_layouts/15/Doc2.aspx?action=edit&sourcedoc=%7B463ae836-601e-43ff-ab8a-bbf2288243a6%7D&wdOrigin=TEAMS-MAGLEV.p2p_ns.rwc&wdExp=TEAMS-TREATMENT&wdhostclicktime=1774243707586&web=1
+
+the above link is for documentation of cross account setup.
+
+
+3) and also implemented the user data script in ec2 module to install the dependencies like docker , docker compose,snmpd,os hardening,cloud watch agent.
+
+4) removed from the user data script and created a separate bash script to run with github actions pipeline for os hardening.
+
+5) worked on deployement like in github we have 2 github repos like in that 1st github repo has 2 images and 2nd github repo has 1 images we need to build and push to 1 ecr repo and need to deploy in 2 ec2 instances.
+
+github repo 1 : https://github.com/abhishek095859/test-apollo [frontend and backend 2 images]
+github repo 2 : https://github.com/abhishek095859/test-cross  [ rnd ]
+
+this is yaml file to build and push 3 images to ecr and deploy in ec2 instance
+
+name: "Multi-Repo 3-Tier Deployment"
+
+on:
+  workflow_dispatch:
+    #inputs:
+      #worker_branch:
+        #description: 'Branch to pull from Repo 2'
+        #required: true
+        #default: 'main'
+        #type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - folder: "./frontend"
+            tag: "web-latest"
+          - folder: "./backend"
+            tag: "api-latest"
+          - folder: "./rnd-logic/rnd" 
+            tag: "rnd-latest"
+    steps:
+      - name: Checkout Main Repo
+        uses: actions/checkout@v4
+
+      - name: Checkout Worker Repo
+        uses: actions/checkout@v4
+        with:
+          repository: "abhishek095859/test-cross"
+          token: ${{ secrets.APP_REPO_TOKEN }}
+          path: "rnd-logic"
+          #ref: ${{ github.event.inputs.worker_branch }}  ####this line is for GitHub actions pipeline select the branch in GitHub repo2.
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185863138492:role/crossaccountb
+          aws-region: ap-south-1
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push
+        run: |
+          REPO_NAME="atl_apac_mum_dtlk_prod_athena2.0_ecr_01"
+          REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          FULL_IMAGE=$REGISTRY/$REPO_NAME:${{ matrix.tag }}
+          docker build -t $FULL_IMAGE ${{ matrix.folder }}
+          docker push $FULL_IMAGE
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185863138492:role/crossaccountb
+          aws-region: ap-south-1
+
+      - name: Deploy Stack via SSM
+        run: |
+          COMPOSE_BASE64=$(base64 -w 0 docker-compose.yml)
+          REGISTRY="185863138492.dkr.ecr.ap-south-1.amazonaws.com"
+          REPO="atl_apac_mum_dtlk_prod_athena2.0_ecr_01"
+
+          aws ssm send-command \
+            --targets "Key=tag:project,Values=athena2.0" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\":[
+              \"aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REGISTRY\",
+              \"mkdir -p /home/ec2-user/athena-app\",
+              \"echo '$COMPOSE_BASE64' | base64 -d > /home/ec2-user/athena-app/docker-compose.yml\",
+              \"echo 'FRONTEND_IMAGE=$REGISTRY/$REPO:web-latest' > /home/ec2-user/athena-app/.env\",
+              \"echo 'BACKEND_IMAGE=$REGISTRY/$REPO:api-latest' >> /home/ec2-user/athena-app/.env\",
+              \"echo 'RND_IMAGE=$REGISTRY/$REPO:rnd-latest' >> /home/ec2-user/athena-app/.env\",
+              \"cd /home/ec2-user/athena-app\",
+              \"docker compose down\",
+              \"docker compose pull\",
+              \"docker compose up -d\",
+              \"docker image prune -f\",
+              \"docker ps\"
+            ]}"
+
+
+
+- name: Checkout Worker Repo
+        uses: actions/checkout@v4
+        with:
+          repository: "abhishek095859/test-cross"
+          token: ${{ secrets.APP_REPO_TOKEN }}
+          path: "rnd-logic"
+          ref: ${{ github.event.inputs.worker_branch }}
+
+
+${{ secrets.APP_REPO_TOKEN }} : the app repo token which is access to  another GitHub repo because in real time we use private GitHub repos so GitHub repo 1 need to access the GitHub repo 2 due to the yaml file is in GitHub repo 1 so we use the secrets.
+
+path : rnd-logic is when the git checkout to GitHub repo 2 it will take the code and store in rnd-logic path so it will build the image.
+
+COMPOSE_BASE64=$(base64 -w 0 docker-compose.yml)
+
+Reads docker-compose.yml
+Converts it into a single-line encoded string
+-w 0 → removes line breaks
+
+
+6) changed in terraform code from the 
+ECR REPO AES256 to KMS encryption.
+
+ encryption_configuration {
+    encryption_type = "KMS"
+    kms_key = var.kms_key_arn
+  }
+
+Termination protection
+Disabled changes to enable in ec2
+
+disable_api_termination = true
+
+
+7) changed the deployement from 1 GitHub actions pipeline to 3 GitHub actions pipeline like for frontend separate , backend and rnd when we edit in frontend folder the GitHub actions pipeline will automatically triggered and It will build image and deployed in ec2 instance 
+
+this is frontend.yml file 
+
+name: Frontend - Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - 'dev/**'
+      - 'feature/**'
+    paths:
+      - 'frontend/**'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185863138492:role/crossaccountb
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Frontend Image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: atl_apac_mum_dtlk_prod_athena2.0_ecr_01
+        run: |
+          docker build -t $REGISTRY/$REPO:web-latest ./frontend
+          docker push $REGISTRY/$REPO:web-latest
+
+
+  deploy:
+    name: Deploy to EC2 via SSM
+    runs-on: ubuntu-latest
+    needs: build 
+    environment: athena-api-prod-docker
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185863138492:role/crossaccountb
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to Private EC2 via SSM
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: atl_apac_mum_dtlk_prod_athena2.0_ecr_01
+        run: |
+          COMPOSE_BASE64=$(base64 -w 0 docker-compose.yml)
+          ENV_BASE64=$(echo -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}\nAPI_KEY=${{ secrets.API_KEY }}" | base64 -w 0)
+
+          aws ssm send-command \
+            --targets "Key=tag:Name,Values=ATL-APAC-MUM-DTLK-PROD-ATHENA2.0-EC2-01,ATL-APAC-MUM-DTLK-PROD-ATHENA2.0-EC2-02" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Auto-updating Frontend Service" \
+            --parameters "{\"commands\":[
+              \"aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REGISTRY\",
+              \"mkdir -p /home/ec2-user/athena-app\",
+              \"cd /home/ec2-user/athena-app\",
+              \"echo '$COMPOSE_BASE64' | base64 -d > /home/ec2-user/athena-app/docker-compose.yml\",
+              \"echo '$ENV_BASE64' | base64 -d > .env\",
+              \"export FRONTEND_IMAGE=${{ env.REGISTRY }}/${{ env.REPO }}:web-latest\",
+              \"export BACKEND_IMAGE=${{ env.REGISTRY }}/${{ env.REPO }}:api-latest\",
+              \"export RND_IMAGE=${{ env.REGISTRY }}/${{ env.REPO }}:rnd-latest\",
+              \"docker compose pull athena-frontend\",
+              \"docker compose up -d athena-frontend\",
+              \"docker image prune -f\",
+              \"docker ps\"
+            ]}"
+
+and same for the backend and rnd also the naming conventions will change.
+
+ - main
+      - 'dev/**'
+      - 'feature/**'
+
+in this we gave any feature branch like feature/ci-cd or feature/dev-cd so it will automatically triggered when we commit any changes in GitHub repos.
+
+
