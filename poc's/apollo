@@ -259,3 +259,23 @@ and same for the backend and rnd also the naming conventions will change.
 in this we gave any feature branch like feature/ci-cd or feature/dev-cd so it will automatically triggered when we commit any changes in GitHub repos.
 
 
+#########################################################
+run-on :
+########################################################
+ubuntu-latest	                                               ubuntu-24.04-arm
+Architecture	x86_64 (Intel/AMD)	                            ARM64 (Ampere/Graviton)
+Default Version	Usually Ubuntu 22.04 or 24.04              	Explicitly Ubuntu 24.04
+Best For	Standard web apps, Intel-based tools.             	Mobile apps, AWS Graviton, IoT.
+Building ARM Images	Slow (Requires QEMU Emulation)	          Fast (Native Execution)
+Cost	1 min = 1 minute of quota                              	1 min = 1 minute of quota
+
+we have changed the runs-on from ubuntu-latest to ubuntu-24.04-arm because the application build and deploy is taking 20+ mins so we have changed to ubuntu-24.04-arm 
+because 
+Latest stable Ubuntu runner (currently Ubuntu 24.04)
+Runs on x86_64 (Intel/AMD) architecture
+
+Fixed OS version: Ubuntu 24.04
+Runs on ARM64 architecture
+and our image is arm64 that why it is fast 
+
+
